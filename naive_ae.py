@@ -225,12 +225,6 @@ if __name__ == '__main__':
         if sample_counter >= 300:
             break
 
-
-    #overrided real labels with new fake ones just for the example. 
-    #when you are using it cancel this act and just add new numbers to represent new labels
-    label_pack[0:10] = 11
-    label_pack[11:20] = 12
-
     codes_pack = codes_pack.cpu()
 
     def draw_subspace(codes, dim_x, dim_y, labels):
@@ -259,4 +253,3 @@ if __name__ == '__main__':
     for i,j in dim_pairs:
         draw_subspace(np.array(codes_pack.detach()), i,j, np.array(label_pack))    
 
-    # plt.show()
