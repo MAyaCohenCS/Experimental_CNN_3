@@ -20,24 +20,6 @@ from IPython import embed
 DATA_PATH = '../data_sets/mnist'
 RESULTS_PATH = './results/naive_out'
 
-Epochs = 30
-Lr_Rate = 1e-3
-batch_size = 128
-
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
-
-
-train_set = datasets.MNIST(root=DATA_PATH, train=True, download=True, transform=transform)
-test_set = datasets.MNIST(root=DATA_PATH, train=False, download=True, transform=transform)
-
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True)
-
-# print(train_set)
-# print(train_set.classes)
 
 
 
@@ -128,11 +110,6 @@ class ConvAutoencoder(nn.Module):
         return x
 
 
-
-model = ConvAutoencoder()
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=Lr_Rate)
-
 def get_device():
     if torch.cuda.is_available():
         device = 'cuda:0'
@@ -148,7 +125,7 @@ def make_dir():
 def save_decod_img(img, epoch):
     img = img.view(img.size(0), 1, 28, 28)
     save_image(img, os.path.join(RESULTS_PATH, 'Autoencoder_image{}.png'.format(epoch)))
-   
+
 
 def training(model, train_loader, Epochs):
     train_loss = []
@@ -178,7 +155,7 @@ def training(model, train_loader, Epochs):
     return train_loss
 
 def test_image_reconstruct(model, test_loader):
-     for batch in test_loader:
+    for batch in test_loader:
         img, _ = batch
         img = img.to(device)
         img = img.view(img.size(0), -1)
@@ -188,59 +165,98 @@ def test_image_reconstruct(model, test_loader):
         break
 
 
-device = get_device()
-model.to(device)
-make_dir()
+if __name__ == '__main__':
+        
+    Epochs = 30
+    Lr_Rate = 1e-3
+    batch_size = 128
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
 
 
-# train_loss = training(model, train_loader, Epochs)
+    train_set = datasets.MNIST(root=DATA_PATH, train=True, download=True, transform=transform)
+    test_set = datasets.MNIST(root=DATA_PATH, train=False, download=True, transform=transform)
 
-# plt.figure()
-# plt.plot(train_loss)
-# plt.title('Train Loss')
-# plt.xlabel('Epochs')
-# plt.ylabel('Loss')
-# plt.savefig('deep_ae_mnist_loss.png')
-
-model.load_state_dict(torch.load(f'trained_models/convAutoEncSigmoid/naive_ae25.pth'))
-
-imgs_pack = torch.zeros(0, 1, 28, 28).to(device)
-label_pack = torch.zeros(0)
-codes_pack = torch.zeros(0, 8).to(device).to(device)
-
-sample_counter = 0
-
-for batch in test_loader:
-    imgs, labels = batch
-    imgs = imgs.to(device)
-    imgs_pack = torch.cat([imgs_pack, imgs])
-    codes = model.encode(imgs)
-
-    codes_pack = torch.cat([codes_pack, codes])
-    label_pack = torch.cat([label_pack, labels])
-
-    sample_counter += len(labels)
-    if sample_counter >= 300:
-        break
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=True)
 
 
-codes_pack = codes_pack.cpu()
+    model = ConvAutoencoder()
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=Lr_Rate)
 
-def draw_subspace(codes, dim_x, dim_y, labels):
-    plt.figure()
 
-    cmap = plt.get_cmap('viridis')
-    for i in range(0,10):
-        plt.scatter(codes[np.where(labels==i),dim_x],codes[np.where(labels==i), dim_y], color=cmap(i/9), marker='$'+str(int(i))+'$')
+
+    device = get_device()
+    model.to(device)
+    make_dir()
+
+
+    # train_loss = training(model, train_loader, Epochs)
+
+    # plt.figure()
+    # plt.plot(train_loss)
+    # plt.title('Train Loss')
+    # plt.xlabel('Epochs')
+    # plt.ylabel('Loss')
+    # plt.savefig('deep_ae_mnist_loss.png')
+
+    model.load_state_dict(torch.load(f'trained_models/convAutoEncSigmoid/naive_ae25.pth'))
+
+    imgs_pack = torch.zeros(0, 1, 28, 28).to(device)
+    label_pack = torch.zeros(0)
+    codes_pack = torch.zeros(0, 8).to(device).to(device)
+
+    sample_counter = 0
+
+    for batch in test_loader:
+        imgs, labels = batch
+        imgs = imgs.to(device)
+        imgs_pack = torch.cat([imgs_pack, imgs])
+        codes = model.encode(imgs)
+
+        codes_pack = torch.cat([codes_pack, codes])
+        label_pack = torch.cat([label_pack, labels])
+
+        sample_counter += len(labels)
+        if sample_counter >= 300:
+            break
+
+
+    #overrided real labels with new fake ones just for the example. 
+    #when you are using it cancel this act and just add new numbers to represent new labels
+    label_pack[0:10] = 11
+    label_pack[11:20] = 12
+
+    codes_pack = codes_pack.cpu()
+
+    def draw_subspace(codes, dim_x, dim_y, labels):
+        plt.figure()
+
+        cmap = plt.get_cmap('viridis')
+        for i in range(0,10):
+            plt.scatter(codes[np.where(labels==i),dim_x],codes[np.where(labels==i), dim_y], color=cmap(i/9), marker='$'+str(int(i))+'$')
+
+
+        label_num = 11
+        lable_name = 'X'
+        plt.scatter(codes[np.where(labels==label_num),dim_x],codes[np.where(labels==label_num), dim_y], color='#800000', marker='$'+lable_name+'$')
+        
+        label_num = 12
+        lable_name = 'S'
+        plt.scatter(codes[np.where(labels==label_num),dim_x],codes[np.where(labels==label_num), dim_y], color='#400000', marker='$'+lable_name+'$')
 
         plt.title(f' latent space: dims:{dim_x},{dim_y}')
         plt.savefig(f'results/subspace_slieces/{dim_x}_{dim_y}.png')
-    
-    plt.close()
+        
+        plt.close()
 
 
-dim_pairs = [(i,j) for i in range(8) for j in range(i+1,8)]
-for i,j in dim_pairs:
-    draw_subspace(np.array(codes_pack.detach()), i,j, np.array(label_pack))    
+    dim_pairs = [(i,j) for i in range(8) for j in range(i+1,8)]
+    for i,j in dim_pairs:
+        draw_subspace(np.array(codes_pack.detach()), i,j, np.array(label_pack))    
 
-# plt.show()
+    # plt.show()
